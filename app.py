@@ -220,4 +220,4 @@ def api_history():
 if __name__ == '__main__':
     print("Dashboard 啟動中...")
     print("模式：歷史圖表顯示 [每日22:00存檔] + [最後一筆即時更新]")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)

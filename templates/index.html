@@ -25,23 +25,12 @@
         .chart-container-lg { position: relative; height: 350px; width: 100%; }
         .pie-container { position: relative; height: 280px; width: 100%; }
         
-        /* === 修改點 1：表格字體放大與樣式 === */
-        .table-custom {
-            font-size: 1.15rem; /* 整體表格字體放大 */
-        }
-        
-        .num-text { 
-            font-family: 'Consolas', 'Monaco', monospace; 
-        }
+        /* 表格樣式 */
+        .table-custom { font-size: 1.15rem; }
+        .num-text { font-family: 'Consolas', 'Monaco', monospace; }
+        .total-col-bold { font-weight: 800 !important; color: #2c3e50; font-size: 1.2rem; }
 
-        /* === 修改點 2：總價值欄位特粗體 === */
-        .total-col-bold {
-            font-weight: 800 !important; /* 強制特粗體 */
-            color: #2c3e50; /* 深色字體增加對比 */
-            font-size: 1.2rem; /* 稍微再大一點點 */
-        }
-
-        /* === 自適應字體 (Container Queries) === */
+        /* 自適應字體 (Container Queries) */
         .adaptive-text-container {
             container-type: inline-size; 
             text-align: center;
@@ -94,7 +83,6 @@
                 <div class="card-header">📋 持倉明細</div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <!-- 加入 table-custom 類別 -->
                         <table class="table table-striped table-hover align-middle mb-0 table-custom">
                             <thead class="table-light">
                                 <tr>
@@ -190,10 +178,60 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            title: function(context) {
+                                return context[0].label; // Tooltip 顯示完整時間
+                            }
+                        }
+                    }
+                },
                 scales: {
-                    x: { display: true, grid: { display: false }, ticks: { maxTicksLimit: 10 } },
-                    y: { grid: { borderDash: [5, 5] } }
+                    x: { 
+                        display: true, 
+                        grid: { display: false }, 
+                        ticks: { 
+                            maxRotation: 0, 
+                            autoSkip: false, 
+                            callback: function(val, index, values) {
+                                const total = values.length;
+                                const fullLabel = this.getLabelForValue(val); 
+                                const dateOnly = fullLabel.split(' ')[0];
+
+                                // 1. 最後一筆：顯示 "完整時間"
+                                if (index === total - 1) return fullLabel;
+
+                                // 2. 第一筆：顯示 "日期"
+                                if (index === 0) return dateOnly;
+
+                                // 3. 中間的三筆：顯示 "日期"
+                                const step = (total - 1) / 4;
+                                const targetIndices = [
+                                    Math.round(step * 1),
+                                    Math.round(step * 2),
+                                    Math.round(step * 3)
+                                ];
+
+                                if (targetIndices.includes(index)) return dateOnly;
+
+                                // 其他隱藏
+                                return null;
+                            }
+                        } 
+                    },
+                    y: { 
+                        grid: { borderDash: [5, 5] },
+                        ticks: {
+                            callback: function(value) {
+                                if(value >= 1000) return '$' + value/1000 + 'k';
+                                return '$' + value;
+                            }
+                        }
+                    }
                 },
                 interaction: { intersect: false, mode: 'index' },
             }
@@ -223,6 +261,7 @@
 
             data.details.forEach((item, index) => {
                 let formattedPrice;
+                // 小幣精度判斷
                 if (memeCoins.includes(item.coin) || item.price < 0.01) {
                     formattedPrice = item.price.toFixed(10);
                 } else {
@@ -235,7 +274,6 @@
                         <td class="ps-4 fw-bold">${item.coin}</td>
                         <td class="text-end num-text">${formattedAmount}</td>
                         <td class="text-end num-text text-muted">$${formattedPrice}</td>
-                        <!-- 修改這裡：加入 total-col-bold 類別 -->
                         <td class="text-end pe-4 num-text total-col-bold">$${item.value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     </tr>
                 `;
@@ -269,7 +307,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'right', labels: { boxWidth: 10, font: { size: 14 } } } // 圖例字體也稍微放大
+                        legend: { position: 'right', labels: { boxWidth: 10, font: { size: 14 } } }
                     }
                 }
             });
@@ -288,7 +326,9 @@
             const history = json.history;
             if (history.length === 0) return;
 
-            const times = history.map(h => h.time.split(' ')[0]);
+            // 重要：這裡不切字串，傳送完整 "日期 時間"，讓 createLineChart 去決定怎麼顯示
+            const times = history.map(h => h.time);
+            
             const totalVals = history.map(h => h.total);
             const latest = history[history.length - 1];
             
@@ -298,7 +338,7 @@
 
             const ctxTotal = document.getElementById('totalHistoryChart').getContext('2d');
             if (lineChartTotal) lineChartTotal.destroy();
-            lineChartTotal = createLineChart(ctxTotal, 'Total Asset', '#764ba2', history.map(h=>h.time), totalVals);
+            lineChartTotal = createLineChart(ctxTotal, 'Total Asset', '#764ba2', times, totalVals);
 
             const ctx1 = document.getElementById('chartTop1').getContext('2d');
             const ctx2 = document.getElementById('chartTop2').getContext('2d');
@@ -308,9 +348,9 @@
             if (lineChartsTop3[1]) lineChartsTop3[1].destroy();
             if (lineChartsTop3[2]) lineChartsTop3[2].destroy();
 
-            lineChartsTop3[0] = createLineChart(ctx1, latest.top1_coin, '#0d6efd', history.map(h=>h.time), history.map(h=>h.top1_val));
-            lineChartsTop3[1] = createLineChart(ctx2, latest.top2_coin, '#198754', history.map(h=>h.time), history.map(h=>h.top2_val));
-            lineChartsTop3[2] = createLineChart(ctx3, latest.top3_coin, '#0dcaf0', history.map(h=>h.time), history.map(h=>h.top3_val));
+            lineChartsTop3[0] = createLineChart(ctx1, latest.top1_coin, '#0d6efd', times, history.map(h=>h.top1_val));
+            lineChartsTop3[1] = createLineChart(ctx2, latest.top2_coin, '#198754', times, history.map(h=>h.top2_val));
+            lineChartsTop3[2] = createLineChart(ctx3, latest.top3_coin, '#0dcaf0', times, history.map(h=>h.top3_val));
 
         } catch (e) {
             console.error("History Error", e);
