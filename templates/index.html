@@ -47,9 +47,16 @@
 <body>
 
 <nav class="navbar navbar-light bg-white shadow-sm mb-4">
-    <div class="container-wide">
-        <span class="navbar-brand mb-0 h1 fw-bold">🚀 Crypto Dashboard</span>
-        <span class="text-muted small" id="lastUpdateTime">載入中...</span>
+    <div class="container-wide d-flex justify-content-between align-items-center">
+        <div>
+            <span class="navbar-brand mb-0 h1 fw-bold">🚀 Crypto Dashboard</span>
+            <span class="text-muted small ms-2" id="lastUpdateTime">載入中...</span>
+        </div>
+        
+        <!-- 新增：跳轉按鈕 -->
+        <a href="/top9" class="btn btn-outline-primary fw-bold" style="border-radius: 8px;">
+            📈 查看 Top 9 持倉走勢
+        </a>
     </div>
 </nav>
 
